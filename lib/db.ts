@@ -63,8 +63,22 @@ export function ensureAuthSchema() {
       );
     `);
 
+    await dbQuery(`
+      create table if not exists user_service_keys (
+        id uuid primary key default gen_random_uuid(),
+        user_id uuid not null references users(id) on delete cascade,
+        service_id text not null,
+        value_text text not null,
+        created_at timestamptz not null default now(),
+        unique (user_id, service_id)
+      );
+    `);
+
     await dbQuery(`create index if not exists sessions_user_id_idx on sessions(user_id);`);
     await dbQuery(`create index if not exists sessions_expires_at_idx on sessions(expires_at);`);
+    await dbQuery(
+      `create index if not exists user_service_keys_user_id_idx on user_service_keys(user_id);`
+    );
   })();
 
   return schemaEnsured;

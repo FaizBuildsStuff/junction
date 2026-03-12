@@ -6,6 +6,7 @@ type SignupBody = {
   username?: string;
   email?: string;
   password?: string;
+  services?: Record<string, string>;
 };
 
 export async function POST(req: Request) {
@@ -13,6 +14,7 @@ export async function POST(req: Request) {
   const username = (body.username ?? "").trim();
   const email = (body.email ?? "").trim().toLowerCase();
   const password = body.password ?? "";
+  const services = body.services ?? {};
 
   if (!username || !email || !password) {
     return NextResponse.json(
@@ -40,6 +42,24 @@ export async function POST(req: Request) {
     );
 
     const user = inserted.rows[0];
+
+    if (services && typeof services === "object") {
+      const entries = Object.entries(services)
+        .map(([serviceId, value]) => [String(serviceId), String(value)] as const)
+        .filter(([serviceId, value]) => serviceId.trim() && value.trim());
+
+      for (const [serviceId, value] of entries) {
+        await dbQuery(
+          `
+          insert into user_service_keys (user_id, service_id, value_text)
+          values ($1, $2, $3)
+          on conflict (user_id, service_id) do update set value_text = excluded.value_text
+        `,
+          [user.id, serviceId.trim(), value]
+        );
+      }
+    }
+
     await createSession(user.id);
 
     return NextResponse.json({ ok: true, user });
