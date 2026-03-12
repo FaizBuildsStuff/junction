@@ -1,14 +1,20 @@
 "use client";
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { gsap } from "gsap";
 import { Zap, ArrowRight, Github, Chrome, Fingerprint, ShieldCheck, Command, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const visualRef = useRef(null);
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const ctx = gsap.context(() => {
@@ -45,6 +51,33 @@ export default function LoginPage() {
     return () => ctx.revert();
   }, []);
 
+  async function onSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+    try {
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = (await res.json()) as { ok: boolean; user?: any; error?: string };
+      if (!res.ok || !data.ok || !data.user) {
+        setError(data.error ?? "Failed to sign in.");
+        return;
+      }
+
+      localStorage.setItem("junction_user", JSON.stringify(data.user));
+      localStorage.setItem("junction_logged_in", "true");
+      window.dispatchEvent(new Event("junction-auth"));
+      router.push("/dashboard");
+    } catch {
+      setError("Failed to sign in.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
   return (
     <main className="relative min-h-screen flex bg-white selection:bg-[#C8F064] font-satoshi overflow-hidden">
       
@@ -77,7 +110,7 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <div className="space-y-8">
+          <form className="space-y-8" onSubmit={onSubmit}>
             {/* SHADCN INPUTS */}
             <div className="reveal-item space-y-3">
               <Label htmlFor="email" className="text-[10px] font-black uppercase tracking-[0.3em] text-[#162C25]/40 ml-1">
@@ -88,6 +121,10 @@ export default function LoginPage() {
                 type="email" 
                 placeholder="rehman@junction.ai"
                 className="h-16 rounded-2xl bg-[#F2F9F1] border-none px-6 font-bold text-[#162C25] focus-visible:ring-2 focus-visible:ring-[#C8F064] transition-all"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                autoComplete="email"
+                required
               />
             </div>
 
@@ -103,13 +140,26 @@ export default function LoginPage() {
                 type="password" 
                 placeholder="••••••••"
                 className="h-16 rounded-2xl bg-[#F2F9F1] border-none px-6 font-bold text-[#162C25] focus-visible:ring-2 focus-visible:ring-[#C8F064] transition-all"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
+                required
               />
             </div>
 
-            <Button className="reveal-item w-full bg-[#162C25] text-[#C8F064] h-16 rounded-2xl font-black uppercase tracking-widest hover:bg-[#1D3A32] transition-all flex justify-between px-8 group shadow-xl shadow-[#162C25]/10">
-              Start Session <ArrowRight className="group-hover:translate-x-2 transition-transform" />
+            {error && (
+              <p className="reveal-item text-sm font-bold text-red-600">{error}</p>
+            )}
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="reveal-item w-full bg-[#162C25] text-[#C8F064] h-16 rounded-2xl font-black uppercase tracking-widest hover:bg-[#1D3A32] transition-all flex justify-between px-8 group shadow-xl shadow-[#162C25]/10 disabled:opacity-60 disabled:pointer-events-none"
+            >
+              {isSubmitting ? "Starting..." : "Start Session"}{" "}
+              <ArrowRight className="group-hover:translate-x-2 transition-transform" />
             </Button>
-          </div>
+          </form>
 
           {/* Social Auth Section */}
           <div className="reveal-item mt-12">

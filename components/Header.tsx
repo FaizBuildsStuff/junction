@@ -7,6 +7,7 @@ import Link from "next/link";
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -23,6 +24,47 @@ export default function Header() {
     };
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const fromStorage = () => {
+      try {
+        return localStorage.getItem("junction_logged_in") === "true";
+      } catch {
+        return false;
+      }
+    };
+
+    const sync = async () => {
+      const storageHint = fromStorage();
+      if (!cancelled) setIsAuthed(storageHint);
+
+      try {
+        const res = await fetch("/api/auth/me", { method: "GET" });
+        const data = (await res.json()) as { ok: boolean; user: any | null };
+        if (!cancelled) setIsAuthed(Boolean(data.user));
+        if (data.user) {
+          localStorage.setItem("junction_user", JSON.stringify(data.user));
+          localStorage.setItem("junction_logged_in", "true");
+        } else {
+          localStorage.removeItem("junction_user");
+          localStorage.removeItem("junction_logged_in");
+        }
+      } catch {
+        // Network errors: keep storage hint
+      }
+    };
+
+    sync();
+
+    const onAuth = () => sync();
+    window.addEventListener("junction-auth", onAuth);
+    return () => {
+      cancelled = true;
+      window.removeEventListener("junction-auth", onAuth);
+    };
   }, []);
 
   useEffect(() => {
@@ -75,10 +117,19 @@ export default function Header() {
 
           {/* ACTIONS */}
           <div className="header-item flex items-center gap-2 lg:gap-6">
-            <Link href="/signin">
-            <button className="hidden lg:block text-[12px] font-black text-[#162C25] uppercase tracking-widest hover:opacity-60 transition-opacity">
-              Log In
-            </button></Link>
+            {isAuthed ? (
+              <Link href="/dashboard">
+                <button className="hidden lg:block text-[12px] font-black text-[#162C25] uppercase tracking-widest hover:opacity-60 transition-opacity">
+                  Dashboard
+                </button>
+              </Link>
+            ) : (
+              <Link href="/signin">
+                <button className="hidden lg:block text-[12px] font-black text-[#162C25] uppercase tracking-widest hover:opacity-60 transition-opacity">
+                  Log In
+                </button>
+              </Link>
+            )}
             
             {/* CTA Button: Full on Desktop, Minimal on Mobile to prevent collision */}
             <button className="group relative bg-[#162C25] text-[#C8F064] px-4 md:px-8 py-2.5 md:py-3.5 rounded-xl md:rounded-2xl text-[12px] font-black uppercase tracking-widest overflow-hidden transition-all hover:scale-[0.98] shadow-xl shadow-[#162C25]/10">
@@ -111,6 +162,13 @@ export default function Header() {
 
         <div className="flex-1 flex flex-col justify-center px-10 gap-6 mt-20">
           <p className="text-[#C8F064] text-[10px] font-black uppercase tracking-[0.3em] mb-4">Navigation</p>
+          <Link
+            href={isAuthed ? "/dashboard" : "/signin"}
+            className="mobile-link text-5xl font-black text-white hover:text-[#C8F064] transition-colors uppercase tracking-tighter"
+            onClick={() => setIsOpen(false)}
+          >
+            {isAuthed ? "Dashboard" : "Log In"}
+          </Link>
           {["Product", "Solutions", "Pricing", "Enterprise"].map((link) => (
             <a 
               key={link} 
