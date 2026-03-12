@@ -127,3 +127,19 @@
     @apply font-sans;
   }
 }
+
+/* Add to your tailwind layers or at the very top */
+@layer utilities {
+  .animate-ticker-scroll {
+    animation: ticker-scroll linear infinite;
+  }
+}
+
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0%);
+  }
+  to {
+    transform: translateX(-50%); /* Scroll exactly half the combined width */
+  }
+}
