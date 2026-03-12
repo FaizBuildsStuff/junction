@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { Settings } from "lucide-react";
 import { getUserFromRequestSession } from "@/lib/auth";
+import SettingsProfileClient from "./SettingsProfileClient";
 
 export default async function SettingsPage() {
   const user = await getUserFromRequestSession();
@@ -40,6 +41,11 @@ export default async function SettingsPage() {
           <p className="mt-2 text-sm font-black text-[#162C25]">{user.email}</p>
         </div>
       </div>
+
+      <SettingsProfileClient
+        initialUsername={user.username}
+        initialEmail={user.email}
+      />
     </div>
   );
 }

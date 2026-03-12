@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Database } from "lucide-react";
 import { getUserFromRequestSession } from "@/lib/auth";
 import { getUserServiceKeys } from "@/lib/service-keys";
+import InfrastructureKeysClient from "./InfrastructureKeysClient";
 
 export default async function InfrastructurePage() {
   const user = await getUserFromRequestSession();
@@ -56,6 +57,8 @@ export default async function InfrastructurePage() {
           ))}
         </div>
       </div>
+
+      <InfrastructureKeysClient storedKeys={keys} />
     </div>
   );
 }
