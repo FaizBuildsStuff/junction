@@ -2,6 +2,7 @@
 import React, { useEffect, useState, useRef } from "react";
 import { Zap, Menu, X, ArrowRight, Instagram, Twitter, Github } from "lucide-react";
 import { gsap } from "gsap";
+import Link from "next/link";
 
 export default function Header() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -74,9 +75,10 @@ export default function Header() {
 
           {/* ACTIONS */}
           <div className="header-item flex items-center gap-2 lg:gap-6">
+            <Link href="/signin">
             <button className="hidden lg:block text-[12px] font-black text-[#162C25] uppercase tracking-widest hover:opacity-60 transition-opacity">
               Log In
-            </button>
+            </button></Link>
             
             {/* CTA Button: Full on Desktop, Minimal on Mobile to prevent collision */}
             <button className="group relative bg-[#162C25] text-[#C8F064] px-4 md:px-8 py-2.5 md:py-3.5 rounded-xl md:rounded-2xl text-[12px] font-black uppercase tracking-widest overflow-hidden transition-all hover:scale-[0.98] shadow-xl shadow-[#162C25]/10">

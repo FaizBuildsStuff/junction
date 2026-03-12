@@ -1,208 +1,165 @@
 "use client";
 import React, { useEffect, useRef } from "react";
 import { gsap } from "gsap";
-import { ArrowUpRight, Zap } from "lucide-react";
-import { theme } from "@/theme/theme";
+import { ArrowUpRight, Zap, Globe, ShieldCheck, Fingerprint } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function Hero() {
-    const containerRef = useRef(null);
-    const textRef = useRef(null);
-    const imageRef = useRef(null);
+  const containerRef = useRef(null);
+  const visualRef = useRef(null);
 
-    useEffect(() => {
-        const ctx = gsap.context(() => {
-            // Entrance animation
-            gsap.from(".animate-text", {
-                y: 50,
-                opacity: 0,
-                duration: 1,
-                stagger: 0.2,
-                ease: "power4.out",
-            });
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      // 1. Entrance Reveal (Staggered)
+      const tl = gsap.timeline({ defaults: { ease: "expo.out" } });
+      
+      tl.from(".reveal-item", {
+        y: 80,
+        opacity: 0,
+        duration: 1.4,
+        stagger: 0.1,
+      })
+      .from(".mockup-frame", {
+        scale: 0.9,
+        opacity: 0,
+        duration: 2,
+        ease: "power4.out"
+      }, "-=1");
 
-            gsap.from(".animate-card", {
-                scale: 0.8,
-                opacity: 0,
-                duration: 1.2,
-                delay: 0.5,
-                ease: "elastic.out(1, 0.75)",
-            });
-        }, containerRef);
-        return () => ctx.revert();
-    }, []);
+      // 2. Mouse Parallax Effect
+      const handleMouseMove = (e: MouseEvent) => {
+        const { clientX, clientY } = e;
+        const xPos = (clientX / window.innerWidth - 0.5) * 30;
+        const yPos = (clientY / window.innerHeight - 0.5) * 30;
 
-    return (
-        <section ref={containerRef} className="relative min-h-screen pt-50 px-6 lg:px-12 overflow-hidden">
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        gsap.to(".parallax-layer", {
+          x: xPos,
+          y: yPos,
+          duration: 1.5,
+          ease: "power2.out",
+        });
+      };
 
-                {/* Left Side: Content */}
-                <div ref={textRef} className="z-10">
-                    <div className="flex items-center gap-2 mb-6 animate-text">
-                        <span className="text-[10px] font-bold tracking-widest uppercase opacity-60">Welcome to</span>
-                        <span className="bg-[#C8F064] text-[#162C25] px-3 py-1 rounded-full text-xs font-bold uppercase">
-                            Junction
-                        </span>
-                    </div>
+      window.addEventListener("mousemove", handleMouseMove);
+      return () => window.removeEventListener("mousemove", handleMouseMove);
+    }, containerRef);
+    return () => ctx.revert();
+  }, []);
 
-                    <h1 className="animate-text text-6xl md:text-8xl font-bold leading-[0.9] tracking-tighter text-[#162C25] mb-8">
-                        Streamline <br />
-                        <span className="flex items-center gap-4">
-                            {/* The Pill Icon from Design */}
-                            <span className="inline-flex items-center justify-center w-20 h-10 md:w-24 md:h-12 border-2 border-[#162C25] rounded-full">
-                                <span className="w-8 h-8 md:w-10 md:h-10 bg-[#162C25] rounded-full flex items-center justify-center">
-                                    <Zap size={16} className="text-[#C8F064] fill-[#C8F064]" />
-                                </span>
-                            </span>
-                            Your
-                        </span>
-                        Stack Costs<sup className="text-2xl top-[-1.5em] ml-2 font-medium">®</sup>
-                    </h1>
+  return (
+    <section 
+      ref={containerRef} 
+      className="relative min-h-[100dvh] flex items-center bg-[#F2F9F1] pt-32 pb-20 px-6 lg:px-16 overflow-hidden selection:bg-[#C8F064] selection:text-[#162C25]"
+    >
+      {/* Background Texture Overlay */}
+      <div className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      
+      <div className="max-w-[1440px] mx-auto grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-20 items-center w-full relative z-10">
+        
+        {/* Left Content: Radical Clarity */}
+        <div className="flex flex-col items-start">
+          <div className="reveal-item inline-flex items-center gap-2 px-4 py-2 bg-white rounded-full border border-[#162C25]/5 mb-10 shadow-sm">
+            <Fingerprint size={14} className="text-[#162C25]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[#162C25]">Engineering First Finance</span>
+          </div>
 
-                    <p className="animate-text max-w-md text-lg text-[#5E6D68] mb-10 leading-relaxed">
-                        Effortlessly track dev-tool expenses, predict usage spikes, and manage your infrastructure burn—all in one hub.
-                    </p>
+          <h1 className="reveal-item text-[clamp(3.5rem,8vw,8.5rem)] font-black leading-[0.85] tracking-[-0.07em] text-[#162C25] mb-12">
+            The Hub For <br />
+            <span className="flex items-center gap-6">
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-[#162C25] via-[#5E6D68] to-[#162C25]">Infrastructure</span>
+              <span className="hidden md:inline-flex w-32 h-16 border-[3px] border-[#162C25] rounded-full items-center justify-center rotate-[-10deg]">
+                <Globe size={28} className="text-[#162C25] animate-pulse" />
+              </span>
+            </span>
+            <span className="block italic">Velocity.</span>
+          </h1>
 
-                    <div className="animate-text flex items-center bg-white rounded-full p-1.5 shadow-sm max-w-md border border-black/5">
-                        <input
-                            type="text"
-                            placeholder="Enter your work email"
-                            className="flex-1 bg-transparent px-6 outline-none text-sm"
-                        />
-                        <button className="bg-[#162C25] text-white px-8 py-3 rounded-full text-sm font-medium hover:bg-[#1D3A32] transition-colors">
-                            Try it free
-                        </button>
+          <p className="reveal-item max-w-lg text-xl md:text-2xl text-[#162C25]/60 mb-14 leading-relaxed font-medium">
+            Junction connects your development velocity directly to fiscal accountability. Automated guardrails for modern engineering teams.
+          </p>
+
+          <div className="reveal-item flex flex-col sm:flex-row items-stretch gap-4 w-full sm:w-auto">
+            <div className="relative group">
+              <input 
+                type="email" 
+                placeholder="Enter work email"
+                className="w-full sm:w-80 bg-white border-2 border-[#162C25]/5 px-8 py-5 rounded-2xl outline-none focus:border-[#C8F064] transition-all font-bold text-[#162C25]"
+              />
+            </div>
+            <Button className="bg-[#162C25] text-[#C8F064] px-12 py-8 rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-transform">
+              Deploy Junction <ArrowUpRight className="ml-2" size={18} />
+            </Button>
+          </div>
+          
+          <div className="reveal-item mt-16 flex items-center gap-8 opacity-40">
+             <div className="flex -space-x-3">
+                {[1,2,3,4].map(i => <div key={i} className="w-10 h-10 rounded-full border-[3px] border-[#F2F9F1] bg-[#162C25]/20" />)}
+             </div>
+             <p className="text-[11px] font-black uppercase tracking-widest">Trusted by 200+ fast-growing startups</p>
+          </div>
+        </div>
+
+        {/* Right Visual: The 3D Mockup Engine */}
+        <div ref={visualRef} className="relative flex items-center justify-center lg:justify-end h-full">
+          <div className="parallax-layer mockup-frame relative z-20 w-full max-w-[420px] aspect-[9/18.5] bg-[#162C25] rounded-[4rem] p-4 shadow-[0_50px_100px_-20px_rgba(22,44,37,0.3)]">
+            {/* The Internal Dashboard UI */}
+            <div className="w-full h-full bg-[#F2F9F1] rounded-[3.2rem] overflow-hidden flex flex-col p-8">
+                <div className="flex justify-between items-center mb-10">
+                   <Zap size={24} className="fill-[#C8F064] text-[#C8F064]" />
+                   <div className="w-10 h-10 rounded-2xl bg-[#162C25] flex items-center justify-center">
+                      <ShieldCheck size={18} className="text-[#C8F064]" />
+                   </div>
+                </div>
+
+                <div className="space-y-2 mb-10">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-30">Total Burn Efficiency</p>
+                    <h3 className="text-5xl font-black text-[#162C25] tracking-tighter">94.2%</h3>
+                    <div className="w-full h-1 bg-[#162C25]/5 rounded-full overflow-hidden">
+                        <div className="w-[94%] h-full bg-[#C8F064]" />
                     </div>
                 </div>
 
-                {/* Right Side: The Visuals */}
-                <div className="relative flex justify-center lg:justify-end">
-                    {/* Main Mobile Mockup Wrapper */}
-                    <div className="animate-card relative z-20 w-[280px] md:w-[320px] aspect-[9/19] bg-black rounded-[3rem] border-[8px] border-black shadow-2xl overflow-hidden">
-
-                        {/* The Screen Content */}
-                        <div className="w-full h-full bg-[#F2F9F1] overflow-hidden flex flex-col font-satoshi">
-
-                            {/* Status Bar Mockup */}
-                            <div className="h-10 w-full flex justify-between items-center px-8 pt-4">
-                                <span className="text-[10px] font-bold">9:41</span>
-                                <div className="flex gap-1.5">
-                                    <div className="w-3 h-3 rounded-full bg-black/10" />
-                                    <div className="w-3 h-3 rounded-full bg-black/10" />
-                                </div>
-                            </div>
-
-                            {/* App Header */}
-                            <div className="px-6 py-4 flex justify-between items-center">
-                                <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-sm">
-                                    <div className="w-4 h-[2px] bg-forest" />
-                                </div>
-                                <span className="font-bold text-xs uppercase tracking-widest text-forest">Junction</span>
-                                <div className="w-8 h-8 bg-[#C8F064] rounded-full flex items-center justify-center shadow-sm">
-                                    <Zap size={12} className="fill-forest" />
-                                </div>
-                            </div>
-
-                            {/* Main Stack Cost Card */}
-                            <div className="px-5">
-                                <div className="w-full bg-forest rounded-[2rem] p-5  shadow-lg relative overflow-hidden">
-                                    {/* Abstract Background Shape */}
-                                    <div className="absolute -right-4 -top-4 w-24 h-24 bg-lime/20 rounded-full blur-2xl" />
-
-                                    <p className="text-[10px] uppercase opacity-60 tracking-widest mb-1">Total Burn • March</p>
-                                    <h3 className="text-2xl font-bold mb-6">$1,284.50</h3>
-
-                                    <div className="flex justify-between items-end">
-                                        <div>
-                                            <p className="text-[8px] opacity-40 uppercase">Active Stack</p>
-                                            <p className="text-[10px] font-medium">12 Services Connected</p>
-                                        </div>
-                                        <div className="bg-lime text-forest px-3 py-1 rounded-full text-[9px] font-bold">
-                                            +2.4%
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Mini Chart Mockup */}
-                            <div className="px-5 mt-6">
-                                <div className="flex justify-between items-center mb-3">
-                                    <span className="text-[10px] font-bold text-forest">Usage Velocity</span>
-                                    <span className="text-[10px] opacity-50">Last 7 Days</span>
-                                </div>
-                                <div className="flex items-end justify-between h-16 gap-1 px-2">
-                                    {[40, 70, 45, 90, 65, 80, 95].map((height, i) => (
-                                        <div
-                                            key={i}
-                                            className={`w-full rounded-t-sm transition-all duration-1000 ${i === 6 ? 'bg-lime' : 'bg-forest/10'}`}
-                                            style={{ height: `${height}%` }}
-                                        />
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Transaction Feed */}
-                            <div className="px-5 mt-8 flex-1 bg-white rounded-t-[2.5rem] pt-6 shadow-[0_-10px_40px_rgba(0,0,0,0.03)]">
-                                <div className="flex justify-between items-center mb-4">
-                                    <span className="text-[10px] font-bold text-forest uppercase tracking-tight">Recent Infrastructure</span>
-                                    <span className="text-[9px] text-lime-600 font-bold">See All</span>
-                                </div>
-
-                                <div className="space-y-4">
-                                    {[
-                                        { label: 'Vercel Edge', cost: '-$42.00', icon: 'V' },
-                                        { label: 'OpenAI API', cost: '-$128.12', icon: 'O' },
-                                        { label: 'Supabase DB', cost: '-$25.00', icon: 'S' },
-                                    ].map((item, idx) => (
-                                        <div key={idx} className="flex justify-between items-center">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-8 h-8 bg-[#F2F9F1] rounded-xl flex items-center justify-center text-[10px] font-bold text-forest border border-black/5">
-                                                    {item.icon}
-                                                </div>
-                                                <div>
-                                                    <p className="text-[10px] font-bold text-forest">{item.label}</p>
-                                                    <p className="text-[8px] opacity-40">Today, 10:45 AM</p>
-                                                </div>
-                                            </div>
-                                            <span className="text-[10px] font-bold text-forest">{item.cost}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-
-                    {/* Background Accent Shape (The Lime box) */}
-                    <div className="animate-card absolute -right-4 top-10 w-[80%] h-[90%] bg-[#C8F064] rounded-[2.5rem] -z-10 flex flex-col justify-end p-10">
-                        <div className="text-[#162C25]">
-                            <div className="flex items-center gap-2 text-2xl font-bold mb-1">
-                                Predictive <Zap size={20} className="fill-current" />
-                            </div>
-                            <div className="text-sm font-medium opacity-80 uppercase tracking-wider mb-4">Analytics</div>
-                            <button className="flex items-center gap-2 text-xs font-bold border-b border-[#162C25] pb-1">
-                                VIEW DASHBOARD <ArrowUpRight size={14} />
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Floating Rating Card */}
-                    <div className="animate-card absolute left-[-20px] top-20 bg-white p-5 rounded-3xl shadow-xl z-30 flex flex-col items-center">
-                        <div className="text-2xl font-bold text-[#162C25]">4.9 <span className="text-sm opacity-50">/5</span></div>
-                        <p className="text-[10px] text-center opacity-60 mb-2">platform users <br /> feedback</p>
-                        <div className="flex gap-0.5">
-                            {[...Array(5)].map((_, i) => (
-                                <Zap key={i} size={10} className="text-yellow-400 fill-yellow-400" />
-                            ))}
-                        </div>
-                    </div>
+                <div className="grid grid-cols-2 gap-4 mb-10">
+                   <div className="p-4 bg-white rounded-3xl border border-[#162C25]/5">
+                      <p className="text-[8px] font-black opacity-30 uppercase mb-2">AWS Usage</p>
+                      <p className="text-sm font-black">$421.10</p>
+                   </div>
+                   <div className="p-4 bg-[#C8F064] rounded-3xl">
+                      <p className="text-[8px] font-black opacity-50 uppercase mb-2">Trend</p>
+                      <p className="text-sm font-black">+2.4%</p>
+                   </div>
                 </div>
 
+                <div className="flex-1 bg-white rounded-[2.5rem] p-6 shadow-sm border border-[#162C25]/5">
+                   <div className="flex justify-between items-center mb-6">
+                      <span className="text-[10px] font-black uppercase tracking-widest opacity-30">Active Stack</span>
+                      <span className="text-[9px] font-black text-[#C8F064] bg-[#162C25] px-2 py-0.5 rounded-full">LIVE</span>
+                   </div>
+                   <div className="space-y-4">
+                      {[1,2,3].map(i => (
+                        <div key={i} className="flex items-center gap-3">
+                           <div className="w-8 h-8 rounded-xl bg-[#F2F9F1]" />
+                           <div className="flex-1 h-2 bg-[#162C25]/5 rounded-full" />
+                           <div className="w-10 h-2 bg-[#162C25]/10 rounded-full" />
+                        </div>
+                      ))}
+                   </div>
+                </div>
             </div>
+          </div>
 
-            {/* Footer Text */}
-            <div className="absolute bottom-8 right-12 hidden lg:block opacity-40 text-xs font-bold uppercase tracking-widest">
-                All Rights Reserved
-            </div>
-        </section>
-    );
+          {/* Floating Abstract Element */}
+          <div className="parallax-layer absolute -left-10 bottom-20 z-30 bg-[#C8F064] p-8 rounded-[3rem] shadow-2xl rotate-12 hidden md:block border-[10px] border-[#F2F9F1]">
+             <div className="flex flex-col items-center">
+                <span className="text-4xl font-black text-[#162C25]">12k</span>
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#162C25]/40 text-center">Requests <br /> Per Second</span>
+             </div>
+          </div>
+
+          {/* Decorative Circle Grid */}
+          <div className="absolute -z-10 top-0 right-0 w-[500px] h-[500px] bg-[#C8F064]/20 blur-[120px] rounded-full" />
+        </div>
+      </div>
+    </section>
+  );
 }
