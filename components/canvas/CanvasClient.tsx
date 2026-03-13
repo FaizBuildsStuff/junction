@@ -35,6 +35,8 @@ import {
   WorkflowNode,
   DependabotNode,
   ReleaseNode,
+  AIRecapNode,
+  CommentNode
 } from "./nodes";
 
 import { 
@@ -48,6 +50,7 @@ import {
   ChevronRight,
   ArrowLeft,
   Settings2,
+  Clock,
   Menu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -60,7 +63,9 @@ import CanvasHeader from "./CanvasHeader";
 import CreateRepoModal from "./CreateRepoModal";
 import CreateIssueModal from "./CreateIssueModal";
 import CreatePRModal from "./CreatePRModal";
+import CommandPalette from "./CommandPalette";
 import { triggerGitHubWorkflow } from "@/app/actions/github";
+import { analyzePR, summarizeCommits, predictWorkflowFailure, getProjectBriefing } from "@/app/actions/ai";
 
 const nodeTypes = {
   commit: CommitNode,
@@ -69,6 +74,8 @@ const nodeTypes = {
   workflow: WorkflowNode,
   dependabot: DependabotNode,
   release: ReleaseNode,
+  aiRecap: AIRecapNode,
+  comment: CommentNode,
 };
 
 const dagreGraph = new dagre.graphlib.Graph();
@@ -79,7 +86,7 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "TB") => 
   dagreGraph.setGraph({ rankdir: direction });
 
   nodes.forEach((node) => {
-    dagreGraph.setNode(node.id, { width: 300, height: 150 });
+    dagreGraph.setNode(node.id, { width: 320, height: 200 });
   });
 
   edges.forEach((edge) => {
@@ -94,8 +101,8 @@ const getLayoutedElements = (nodes: Node[], edges: Edge[], direction = "TB") => 
     node.sourcePosition = isHorizontal ? Position.Right : Position.Bottom;
 
     node.position = {
-      x: nodeWithPosition.x - 150,
-      y: nodeWithPosition.y - 75,
+      x: nodeWithPosition.x - 160,
+      y: nodeWithPosition.y - 100,
     };
 
     return node;
@@ -122,15 +129,33 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
   // Power Feature States
   const [menu, setMenu] = useState<{ x: number; y: number; node: any } | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
   const [isPRModalOpen, setIsPRModalOpen] = useState(false);
+
+  // Time Machine States
+  const [history, setHistory] = useState<any[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   const [automationSettings, setAutomationSettings] = useState({
     autoPush: true,
     issueGated: false,
     realTimeSync: true,
+    aiAnalysis: true,
   });
+
+  // ShortCut Listener for CMD+K
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsCommandPaletteOpen(true);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const [analytics, setAnalytics] = useState({
     commits: 0,
@@ -140,7 +165,30 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
     alerts: 0
   });
 
-  const fetchData = useCallback(async (isSilent = false) => {
+  const storageKey = `junction-pos-v1-${owner}-${repo}`;
+
+  const savePositions = useCallback((nodes: Node[]) => {
+    const positions = nodes.reduce((acc, node) => {
+        acc[node.id] = node.position;
+        return acc;
+    }, {} as Record<string, { x: number, y: number }>);
+    localStorage.setItem(storageKey, JSON.stringify(positions));
+  }, [storageKey]);
+
+  const loadPositions = useCallback(() => {
+    const saved = localStorage.getItem(storageKey);
+    return saved ? JSON.parse(saved) : null;
+  }, [storageKey]);
+
+  const onNodeDragStop = useCallback((_: any, node: Node) => {
+    setNodes(nds => {
+        const updated = nds.map(n => n.id === node.id ? node : n);
+        savePositions(updated);
+        return updated;
+    });
+  }, [savePositions, setNodes]);
+
+  const fetchData = useCallback(async (isSilent = false, forceLayout = false) => {
     if (!isSilent) setLoading(true);
     try {
       const [commits, issues, prs, workflows, releases, alerts] = await Promise.all([
@@ -152,8 +200,74 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
         getGitHubDependabotAlerts(owner, repo),
       ]);
 
+      let aiSummary = "";
+      let growthAdvice = "";
+      let analyzedPRs = prs;
+      let analyzedWorkflows = workflows.workflow_runs || [];
+
+      // AI Orchestration
+      if (automationSettings.aiAnalysis) {
+        console.log("Junction AI: Orchestrating Architecture Analysis...");
+        const aiPromises: Promise<any>[] = [
+            summarizeCommits(commits.slice(0, 15)),
+            getProjectBriefing(repo, commits)
+        ];
+
+        // Analyze first 3 PRs
+        prs.slice(0, 3).forEach((pr: any) => {
+            aiPromises.push(analyzePR(pr));
+        });
+
+        // Predict failure for the most recent workflow if it's running
+        if (analyzedWorkflows.length > 0) {
+            aiPromises.push(predictWorkflowFailure(analyzedWorkflows.slice(0, 10)));
+        }
+
+        const aiResults = await Promise.all(aiPromises);
+        aiSummary = aiResults[0];
+        growthAdvice = aiResults[1];
+        
+        // Map PR results
+        analyzedPRs = prs.map((pr: any, idx: number) => {
+            if (idx < 3) return { ...pr, aiAnalysis: aiResults[idx + 1] };
+            return pr;
+        });
+
+        // Map Workflow results
+        if (analyzedWorkflows.length > 0) {
+            const prediction = aiResults[aiResults.length - 1];
+            analyzedWorkflows = analyzedWorkflows.map((run: any, idx: number) => {
+                if (idx === 0) return { ...run, aiPrediction: prediction };
+                return run;
+            });
+        }
+      }
+
       const newNodes: any[] = [];
       const newEdges: any[] = [];
+
+      // Add AI Recap Node if summary exists
+      if (aiSummary) {
+          newNodes.push({
+              id: 'ai-recap',
+              type: 'aiRecap',
+              data: { summary: aiSummary, count: commits.length },
+              position: { x: 0, y: -200 }
+          });
+      }
+
+      // Add Growth Comment Node if advice exists
+      if (growthAdvice) {
+          newNodes.push({
+              id: 'ai-growth-comment',
+              type: 'comment',
+              data: { 
+                  text: growthAdvice, 
+                  author: "System Strategy Lead"
+              },
+              position: { x: 400, y: -200 }
+          });
+      }
 
       // Create Commit Nodes & Edges
       commits.forEach((commit: any, idx: number) => {
@@ -184,8 +298,8 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
         });
       });
 
-      // PR Nodes
-      prs.forEach((pr: any) => {
+      // PR Nodes (Using AI Analyzed Data)
+      analyzedPRs.forEach((pr: any) => {
         newNodes.push({
           id: `pr-${pr.id}`,
           type: "pr",
@@ -194,17 +308,15 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
         });
       });
 
-      // Workflow Nodes
-      if (workflows.workflow_runs) {
-        workflows.workflow_runs.slice(0, 5).forEach((run: any) => {
-          newNodes.push({
-            id: `workflow-${run.id}`,
-            type: "workflow",
-            data: run,
-            position: { x: 0, y: 0 },
-          });
+      // Workflow Nodes (Using AI Analyzed Data)
+      analyzedWorkflows.slice(0, 5).forEach((run: any) => {
+        newNodes.push({
+          id: `workflow-${run.id}`,
+          type: "workflow",
+          data: run,
+          position: { x: 0, y: 0 },
         });
-      }
+      });
 
       // Alert Nodes
       alerts.forEach((alert: any) => {
@@ -226,13 +338,6 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
         });
       });
 
-      const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(
-        newNodes,
-        newEdges
-      );
-
-      setNodes([...layoutedNodes]);
-      setEdges([...layoutedEdges]);
       setAnalytics({
         commits: commits.length,
         issues: issues.length,
@@ -240,13 +345,54 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
         activeWorkflows: workflows.total_count || 0,
         alerts: alerts.length
       });
+
+      // Apply Layout or Load Positions
+      const savedPositions = loadPositions();
+      
+      const newState: { nodes: Node[], edges: Edge[], analytics: any } = { 
+        nodes: [], 
+        edges: [], 
+        analytics: {
+          commits: commits.length,
+          issues: issues.length,
+          prs: prs.length,
+          activeWorkflows: workflows.total_count || 0,
+          alerts: alerts.length
+        }
+      };
+
+      if (forceLayout || !savedPositions) {
+          const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(newNodes, newEdges);
+          setNodes([...layoutedNodes]);
+          setEdges([...layoutedEdges]);
+          newState.nodes = [...layoutedNodes];
+          newState.edges = [...layoutedEdges];
+          if (!isSilent) savePositions(layoutedNodes);
+      } else {
+          const nodesWithPositions = newNodes.map(node => ({
+              ...node,
+              position: savedPositions[node.id] || node.position
+          }));
+          setNodes([...nodesWithPositions]);
+          setEdges([...newEdges]);
+          newState.nodes = [...nodesWithPositions];
+          newState.edges = [...newEdges];
+      }
+      
+      // Update History
+      setHistory(prev => {
+          const newHistory = [...prev, newState].slice(-20); // Keep last 20 states
+          setHistoryIndex(newHistory.length - 1);
+          return newHistory;
+      });
+
       setLastUpdated(new Date());
     } catch (err) {
       console.error("Error fetching canvas data:", err);
     } finally {
       if (!isSilent) setLoading(false);
     }
-  }, [owner, repo, setNodes, setEdges]);
+  }, [owner, repo, setNodes, setEdges, automationSettings.aiAnalysis]);
 
   useEffect(() => {
     fetchData();
@@ -256,6 +402,16 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
     }, 30000);
     return () => clearInterval(interval);
   }, [fetchData, automationSettings.realTimeSync]);
+
+  const onHistoryChange = (index: number) => {
+    const prevState = history[index];
+    if (prevState) {
+        setHistoryIndex(index);
+        setNodes(prevState.nodes);
+        setEdges(prevState.edges);
+        setAnalytics(prevState.analytics);
+    }
+  };
 
   const onConnect = useCallback(
     (params: Connection | Edge) => setEdges((eds) => addEdge(params, eds)),
@@ -290,9 +446,13 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
     
     // Layout Logic
     if (action === "layout") {
-        const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(nodes, edges);
-        setNodes([...layoutedNodes]);
-        setEdges([...layoutedEdges]);
+        fetchData(true, true);
+        return;
+    }
+
+    // AI Trigger
+    if (action === "trigger-ai") {
+        fetchData();
         return;
     }
 
@@ -329,6 +489,30 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
         alert("Commit Block: Commits are usually made via local Git or PR merge. This block helps visualize prospective changes.");
         return;
     }
+
+    if (action === "add-comment") {
+        const id = `comment-${Date.now()}`;
+        const newNode: Node = {
+            id,
+            type: "comment",
+            position: { x: Math.random() * 400, y: Math.random() * 400 },
+            data: { 
+                text: "Add your strategic growth insight here...", 
+                author: "User Strategy"
+            },
+        };
+        setNodes((nds) => nds.concat(newNode));
+        return;
+    }
+
+    if (action === "delete-node") {
+        const nodeId = data?.id;
+        if (nodeId) {
+            setNodes(nds => nds.filter(n => n.id !== nodeId));
+            setEdges(eds => eds.filter(e => e.source !== nodeId && e.target !== nodeId));
+        }
+        return;
+    }
   };
 
   return (
@@ -341,6 +525,7 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
         onConnect={onConnect}
         onNodeContextMenu={onNodeContextMenu}
         onPaneContextMenu={onPaneContextMenu}
+        onNodeDragStop={onNodeDragStop}
         nodeTypes={nodeTypes}
         fitView
         className="bg-[#F2F9F1]/20"
@@ -373,6 +558,33 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
               </div>
            </div>
         </Panel>
+
+        {history.length > 1 && (
+            <Panel position="bottom-center" className="mb-12">
+                <div className="bg-white/90 backdrop-blur-2xl p-6 rounded-[2rem] border border-[#162C25]/5 shadow-[0_30px_60px_rgba(22,44,37,0.1)] flex items-center gap-6 min-w-[420px] animate-in slide-in-from-bottom-4 duration-700">
+                    <div className="w-10 h-10 rounded-xl bg-[#F2F9F1] flex items-center justify-center text-[#162C25]">
+                        <Clock size={20} />
+                    </div>
+                    <div className="flex-1">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em] text-[#162C25]/40">Time Machine</span>
+                            <span className="text-[10px] font-black text-[#162C25]">
+                                <span className="text-[#C8F064] bg-[#162C25] px-1.5 py-0.5 rounded-md mr-1">{historyIndex + 1}</span> 
+                                <span className="opacity-20">/ {history.length}</span>
+                            </span>
+                        </div>
+                        <input 
+                            type="range" 
+                            min="0" 
+                            max={history.length - 1} 
+                            value={historyIndex} 
+                            onChange={(e) => onHistoryChange(parseInt(e.target.value))}
+                            className="w-full accent-[#162C25] h-1 bg-[#162C25]/5 rounded-full appearance-none cursor-pointer"
+                        />
+                    </div>
+                </div>
+            </Panel>
+        )}
 
         <Panel position="bottom-right" className="m-8 max-w-[320px] transition-all duration-500" style={{ transform: isSidebarOpen ? 'translateX(-340px)' : 'none' }}>
             <div className="bg-[#162C25] text-white p-8 rounded-[3rem] shadow-[0_30px_100px_rgba(0,0,0,0.4)] border border-white/10 relative overflow-hidden group">
@@ -437,6 +649,12 @@ function CanvasInner({ owner, repo }: { owner: string; repo: string }) {
         automationSettings={automationSettings}
         onSettingChange={(s, v) => setAutomationSettings({...automationSettings, [s]: v})}
         onAddBlock={(type) => onHandleAction(`add-${type}`)}
+      />
+
+      <CommandPalette 
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onAction={onHandleAction}
       />
 
       <CreateRepoModal 

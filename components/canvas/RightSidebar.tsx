@@ -12,7 +12,10 @@ import {
   GitCommit,
   CircleDot,
   GitPullRequest,
-  PlayCircle
+  PlayCircle,
+  Sparkles,
+  Clock,
+  MessageSquare
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -46,13 +49,14 @@ export default function RightSidebar({
         <section>
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-[10px] font-black uppercase tracking-[0.2em] text-[#162C25]/40">Block Library</h3>
-            <span className="text-[10px] font-bold text-[#C8F064] bg-[#162C25] px-2 py-0.5 rounded">8 Blocks</span>
+            <span className="text-[10px] font-bold text-[#C8F064] bg-[#162C25] px-2 py-0.5 rounded">9 Blocks</span>
           </div>
           <div className="grid grid-cols-2 gap-3">
             <BlockItem icon={<GitCommit size={18} />} label="Commit" onClick={() => onAddBlock("commit")} />
             <BlockItem icon={<CircleDot size={18} />} label="Issue" onClick={() => onAddBlock("issue")} />
             <BlockItem icon={<GitPullRequest size={18} />} label="PR" onClick={() => onAddBlock("pr")} />
             <BlockItem icon={<PlayCircle size={18} />} label="Workflow" onClick={() => onAddBlock("workflow")} />
+            <BlockItem icon={<MessageSquare size={18} />} label="Growth Note" onClick={() => onAddBlock("comment")} />
           </div>
         </section>
 
@@ -84,6 +88,13 @@ export default function RightSidebar({
                checked={automationSettings.realTimeSync}
               onChange={(v) => onSettingChange("realTimeSync", v)}
             />
+            <AutomationToggle 
+              id="ai-analysis" 
+              label="Gemini AI Engineering Brain" 
+              description="Analyze architecture and predict failures."
+               checked={automationSettings.aiAnalysis}
+              onChange={(v) => onSettingChange("aiAnalysis", v)}
+            />
           </div>
         </section>
       </div>
@@ -95,8 +106,22 @@ export default function RightSidebar({
             </div>
             <div>
                 <p className="text-[10px] font-black uppercase text-[#162C25]">System Status</p>
-                <p className="text-xs font-bold text-emerald-600">All Systems Nominal</p>
+                <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600">
+                    <span className="relative flex h-2 w-2">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    All Systems Nominal
+                </div>
             </div>
+        </div>
+        <div className="bg-[#162C25] rounded-2xl p-4 mt-3 flex items-center justify-between group cursor-pointer overflow-hidden relative">
+            <div className="relative z-10">
+                <p className="text-[8px] font-black uppercase text-white/40 tracking-widest">Temporal Buffer</p>
+                <p className="text-xs font-black text-[#C8F064]">Time Machine Active</p>
+            </div>
+            <Clock size={16} className="text-[#C8F064] relative z-10 group-hover:rotate-[360deg] transition-transform duration-1000" />
+            <div className="absolute inset-0 bg-gradient-to-r from-white/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
     </div>

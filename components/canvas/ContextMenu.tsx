@@ -33,29 +33,33 @@ export default function ContextMenu({
       {node ? (
         <>
           <div className="px-3 py-2 text-[10px] font-black uppercase tracking-widest text-[#162C25]/40 border-b border-[#162C25]/5 mb-1">
-            {node.type} Actions
+            {node.type === 'comment' ? 'Perspective' : node.type} Actions
           </div>
-          <MenuButton 
-            icon={<Upload size={16} />} 
-            label="Push Changes" 
-            onClick={() => onAction("push", node)} 
-          />
-          <MenuButton 
-            icon={<GitBranch size={16} />} 
-            label="New Branch from here" 
-            onClick={() => onAction("branch", node)} 
-          />
-          <MenuButton 
-            icon={<RefreshCw size={16} />} 
-            label="Sync State" 
-            onClick={() => onAction("sync", node)} 
-          />
+          {node.type !== 'comment' && (
+            <>
+              <MenuButton 
+                icon={<Upload size={16} />} 
+                label="Push Changes" 
+                onClick={() => onAction("push", node)} 
+              />
+              <MenuButton 
+                icon={<GitBranch size={16} />} 
+                label="New Branch from here" 
+                onClick={() => onAction("branch", node)} 
+              />
+              <MenuButton 
+                icon={<RefreshCw size={16} />} 
+                label="Sync State" 
+                onClick={() => onAction("sync", node)} 
+              />
+            </>
+          )}
           <div className="h-px bg-[#162C25]/5 my-1" />
           <MenuButton 
             icon={<Trash2 size={16} />} 
-            label="Delete Record" 
+            label={node.type === 'comment' ? "Remove Comment" : "Delete Record"} 
             className="text-red-500 hover:bg-red-50 hover:text-red-600"
-            onClick={() => onAction("delete", node)} 
+            onClick={() => onAction("delete-node", node)} 
           />
         </>
       ) : (

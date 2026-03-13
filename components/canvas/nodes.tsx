@@ -12,7 +12,11 @@ import {
   Clock,
   CheckCircle2,
   XCircle,
-  AlertTriangle
+  AlertTriangle,
+  Sparkles,
+  Zap,
+  MessageSquare,
+  Trash2
 } from "lucide-react";
 
 const NodeContainer = ({ children, className = "", selected = false }: { children: React.ReactNode, className?: string, selected?: boolean }) => (
@@ -82,10 +86,38 @@ export const PRNode = memo(({ data, selected }: any) => (
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between mb-1">
-          <span className="text-[10px] font-black uppercase tracking-widest text-purple-600/60">PR #{data.number}</span>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-purple-600/60">PR #{data.number}</span>
+            {data.aiAnalysis && (
+              <div className={`px-1.5 py-0.5 rounded text-[8px] font-black uppercase ${
+                data.aiAnalysis.riskScore > 70 ? 'bg-red-500 text-white' : 
+                data.aiAnalysis.riskScore > 30 ? 'bg-amber-400 text-[#162C25]' : 'bg-emerald-400 text-[#162C25]'
+              }`}>
+                Risk: {data.aiAnalysis.riskScore}
+              </div>
+            )}
+          </div>
           <span className="text-[10px] font-bold text-[#162C25]/40">{data.base.ref} ← {data.head.ref}</span>
         </div>
         <p className="text-sm font-black text-[#162C25] leading-snug">{data.title}</p>
+        
+        {data.aiAnalysis && selected && (
+          <div className="mt-3 p-3 rounded-xl bg-purple-50/50 border border-purple-100 animate-in fade-in slide-in-from-top-2 duration-300">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles size={12} className="text-purple-600" />
+              <span className="text-[9px] font-black uppercase tracking-widest text-purple-600">AI Architecture Insights</span>
+            </div>
+            <ul className="space-y-1.5">
+              {data.aiAnalysis.suggestions.map((s: string, i: number) => (
+                <li key={i} className="text-[10px] font-medium text-[#162C25]/70 flex items-start gap-1.5">
+                  <div className="w-1 h-1 rounded-full bg-purple-400 mt-1.5 flex-shrink-0" />
+                  {s}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="flex items-center gap-2 mt-3 overflow-hidden">
           {data.requested_reviewers?.map((r: any) => (
             <img key={r.id} src={r.avatar_url} title={r.login} className="w-5 h-5 rounded-full border border-white -ml-1 first:ml-0" alt="" />
@@ -121,13 +153,21 @@ export const WorkflowNode = memo(({ data, selected }: any) => {
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <span className="text-[9px] font-black uppercase tracking-widest text-[#162C25]/40">Action</span>
-            <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
-              isRunning ? 'bg-blue-100 text-blue-700' : 
-              isSuccess ? 'bg-emerald-100 text-emerald-700' : 
-              isFailure ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
-            }`}>
-              {data.status.replace('_', ' ')}
-            </span>
+            <div className="flex items-center gap-1.5">
+               {data.aiPrediction && (
+                 <div className="flex items-center gap-1 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100">
+                    <Zap size={8} className="text-amber-500 fill-amber-500" />
+                    <span className="text-[8px] font-black text-amber-700">{data.aiPrediction.probability}% Fail</span>
+                 </div>
+               )}
+               <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded ${
+                isRunning ? 'bg-blue-100 text-blue-700' : 
+                isSuccess ? 'bg-emerald-100 text-emerald-700' : 
+                isFailure ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-700'
+               }`}>
+                {data.status.replace('_', ' ')}
+               </span>
+            </div>
           </div>
           <p className="text-xs font-black text-[#162C25] truncate">{data.name}</p>
           <p className="text-[10px] font-medium text-[#162C25]/50 mt-1 truncate">{data.display_title}</p>
@@ -183,3 +223,78 @@ export const ReleaseNode = memo(({ data, selected }: any) => (
     <Handle type="source" position={Position.Bottom} className="opacity-0" />
   </NodeContainer>
 ));
+
+export const AIRecapNode = memo(({ data, selected }: any) => (
+  <NodeContainer selected={selected} className="min-w-[320px] bg-[#162C25] text-white overflow-hidden relative border-none">
+    <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#C8F064]/20 to-transparent rounded-bl-[4rem]" />
+    <Handle type="target" position={Position.Top} className="opacity-0" />
+    <div className="flex items-start gap-4 relative z-10">
+      <div className="w-12 h-12 rounded-2xl bg-[#C8F064] flex items-center justify-center text-[#162C25] shadow-lg shadow-[#C8F064]/20">
+        <Sparkles size={24} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between mb-2">
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#C8F064]">Gemini Executive Briefing</span>
+            <span className="text-[10px] font-bold text-white/40">Analysis Complete</span>
+        </div>
+        <p className="text-sm font-medium leading-relaxed italic text-white/90">
+            "{data.summary}"
+        </p>
+        <div className="mt-4 flex items-center gap-2">
+            <div className="px-2 py-0.5 rounded bg-white/10 text-[8px] font-black uppercase tracking-widest">
+                Source: {data.count} Commits
+            </div>
+            <div className="h-0.5 flex-1 bg-white/5" />
+        </div>
+      </div>
+    </div>
+    <Handle type="source" position={Position.Bottom} className="opacity-0" />
+  </NodeContainer>
+));
+
+export const CommentNode = memo(({ data, selected }: any) => {
+  const [displayedText, setDisplayedText] = React.useState("");
+  const text = data.text || "";
+
+  React.useEffect(() => {
+    let i = 0;
+    setDisplayedText("");
+    const interval = setInterval(() => {
+      setDisplayedText(text.substring(0, i));
+      i++;
+      if (i > text.length) clearInterval(interval);
+    }, 20);
+    return () => clearInterval(interval);
+  }, [text]);
+
+  return (
+    <NodeContainer selected={selected} className="min-w-[300px] border-2 border-dashed border-[#C8F064] bg-[#F2F9F1]/80 shadow-2xl">
+      <Handle type="target" position={Position.Top} className="opacity-0" />
+      <div className="flex items-start gap-4">
+        <div className="w-10 h-10 rounded-xl bg-[#C8F064] flex items-center justify-center text-[#162C25] shadow-lg shadow-[#C8F064]/20">
+          <MessageSquare size={20} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center justify-between mb-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#162C25]/40">{data.author || "System Growth Lead"}</span>
+              <span className="text-[8px] font-bold text-[#162C25]/20 uppercase">Interactive Context</span>
+          </div>
+          <p className="text-xs font-bold leading-relaxed text-[#162C25] whitespace-pre-wrap">
+              {displayedText}
+              <span className="inline-block w-1.5 h-4 bg-[#C8F064] ml-1 animate-pulse" />
+          </p>
+          <div className="mt-4 pt-3 border-t border-[#162C25]/5 flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-[8px] font-black text-[#162C25]/30 uppercase tracking-widest">
+                  <Zap size={10} className="text-[#C8F064] fill-[#C8F064]" />
+                  Priority Insight
+              </div>
+              <div className="text-[8px] font-bold text-[#162C25]/20 italic">
+                  Right-click to remove
+              </div>
+          </div>
+        </div>
+      </div>
+      <Handle type="source" position={Position.Bottom} className="opacity-0" />
+    </NodeContainer>
+  );
+});
