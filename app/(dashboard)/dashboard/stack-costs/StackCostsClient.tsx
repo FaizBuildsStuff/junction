@@ -5,8 +5,11 @@ import { stackServices } from "@/lib/constants";
 import { type MockCostSummary } from "@/lib/integrations/mock-costs";
 import { formatMoneyMinor } from "@/lib/integrations/stripe";
 import { AlertCircle, Clock, CheckCircle2 } from "lucide-react";
+import { GitHubManagementDialog } from "@/components/GitHubManagementDialog";
 
 export default function StackCostsClient({ mockCosts }: { mockCosts: MockCostSummary[] }) {
+    const [isGithubDialogOpen, setIsGithubDialogOpen] = React.useState(false);
+
     if (mockCosts.length === 0) {
         return (
             <div className="bg-white rounded-[3rem] border border-[#162C25]/5 p-10 shadow-[0_20px_50px_rgba(22,44,37,0.04)] mt-6 text-center">
@@ -24,6 +27,7 @@ export default function StackCostsClient({ mockCosts }: { mockCosts: MockCostSum
                 if (!serviceDef) return null;
 
                 const Icon = serviceDef.icon;
+                const isGithub = cost.serviceId === "github";
 
                 // Calculate percentages safely
                 const limit = cost.monthlyLimit || 1;
@@ -53,7 +57,8 @@ export default function StackCostsClient({ mockCosts }: { mockCosts: MockCostSum
                 return (
                     <div
                         key={cost.serviceId}
-                        className="group relative bg-white rounded-[2.5rem] p-8 border border-[#162C25]/5 shadow-[0_8px_30px_rgba(22,44,37,0.03)] hover:shadow-[0_20px_50px_rgba(22,44,37,0.06)] transition-all duration-500 flex flex-col justify-between overflow-hidden"
+                        onClick={() => isGithub && setIsGithubDialogOpen(true)}
+                        className={`group relative bg-white rounded-[2.5rem] p-8 border border-[#162C25]/5 shadow-[0_8px_30px_rgba(22,44,37,0.03)] hover:shadow-[0_20px_50px_rgba(22,44,37,0.06)] transition-all duration-500 flex flex-col justify-between overflow-hidden ${isGithub ? 'cursor-pointer hover:border-[#162C25]/20' : ''}`}
                     >
                         {/* Background Accent */}
                         <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-bl from-[#F2F9F1] to-transparent opacity-50 rounded-bl-[4rem] -z-10 group-hover:scale-110 transition-transform duration-700" />
@@ -66,7 +71,14 @@ export default function StackCostsClient({ mockCosts }: { mockCosts: MockCostSum
                                         <Icon size={24} />
                                     </div>
                                     <div>
-                                        <h3 className="font-black text-xl text-[#162C25]">{serviceDef.name}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-black text-xl text-[#162C25]">{serviceDef.name}</h3>
+                                            {isGithub && (
+                                                <span className="text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded bg-[#162C25]/5 text-[#162C25]/40 group-hover:bg-[#162C25] group-hover:text-[#C8F064] transition-colors">
+                                                    Manage
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className={`flex items-center gap-1.5 mt-1.5 px-2.5 py-1 w-fit rounded-lg text-[10px] uppercase tracking-widest font-bold ${statusColor}`}>
                                             <StatusIcon size={12} />
                                             {cost.status}
@@ -154,6 +166,11 @@ export default function StackCostsClient({ mockCosts }: { mockCosts: MockCostSum
                     </div>
                 );
             })}
+
+            <GitHubManagementDialog
+                isOpen={isGithubDialogOpen}
+                onOpenChange={setIsGithubDialogOpen}
+            />
         </div>
     );
 }
